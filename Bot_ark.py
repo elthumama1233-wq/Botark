@@ -7,7 +7,6 @@ import asyncio
 # ==========================================
 # CONFIGURACIÓN (LLENA ESTAS WEAS)
 # ==========================================
-TOKEN = "MTQ1NzEyMjc4OTQzNjk0ODU2MQ.GYIFEA.O2mcUuiOnmyROU81opmLG3grISVUT6fqnVUcko"
 
 # IP de tu server (sin puerto). Ej: '45.235.98.12'
 SERVER_IP = '31.214.158.243' 
@@ -73,4 +72,5 @@ async def status(ctx):
     except Exception as e:
         await ctx.send(f"No pude conectar con el server, wn :( \nError: {e}")
 token_secreto = os.getenv('DISCORD_TOKEN') # Aquí le decimos "busca la llave en la caja fuerte del sistema"
+
 bot.run(token_secreto)
