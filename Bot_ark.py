@@ -17,7 +17,9 @@ class SimpleHandler(BaseHTTPRequestHandler):
 
 def correr_web():
     port = int(os.environ.get("PORT", 8080))
+    print(f"🔴 INTENTANDO INICIAR SERVIDOR WEB EN PUERTO: {port}")
     server = HTTPServer(('0.0.0.0', port), SimpleHandler)
+    print(f"🟢 SERVIDOR WEB LISTO EN PUERTO: {port}")
     server.serve_forever()
 
 # Iniciamos el servidor web falso en otro hilo
@@ -86,3 +88,4 @@ if token_secreto is None:
     print("¡ERROR! No encontré el token. Revisa las variables de entorno en Render.")
 else:
     bot.run(token_secreto)
+
