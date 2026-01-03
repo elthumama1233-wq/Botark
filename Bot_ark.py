@@ -1,3 +1,4 @@
+import os
 import discord
 from discord.ext import commands, tasks
 import a2s
@@ -71,4 +72,5 @@ async def status(ctx):
         await ctx.send(mensaje)
     except Exception as e:
         await ctx.send(f"No pude conectar con el server, wn :( \nError: {e}")
-bot.run(TOKEN)
+token_secreto = os.getenv('DISCORD_TOKEN') # Aquí le decimos "busca la llave en la caja fuerte del sistema"
+bot.run(token_secreto)
