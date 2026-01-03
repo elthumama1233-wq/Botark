@@ -1,10 +1,9 @@
 import os
 import discord
 from discord.ext import commands, tasks
-import a2s
-import asyncio
-from http.server import HTTPServer, BaseHTTPRequestHandler
+import requests # <--- LIBRERIA NUEVA
 import threading
+from http.server import HTTPServer, BaseHTTPRequestHandler
 
 # ==========================================
 # TRUCO PA QUE RENDER NO APAGUE LA WEA
@@ -22,15 +21,15 @@ def correr_web():
     print(f"🟢 SERVIDOR WEB LISTO EN PUERTO: {port}")
     server.serve_forever()
 
-# Iniciamos el servidor web falso en otro hilo
 threading.Thread(target=correr_web).start()
 
 # ==========================================
-# CONFIGURACIÓN ARK
+# CONFIGURACIÓN BATTLEMETRICS
 # ==========================================
 
-SERVER_IP = '31.214.158.243' 
-QUERY_PORT = 11201
+# PON AQUÍ EL ID QUE SACASTE DE LA URL DE BATTLEMETRICS
+BM_SERVER_ID = "37035830"  # <--- CAMBIA ESTO POR TU ID REAL (Ejem: 1234567)
+API_URL = f"https://api.battlemetrics.com/servers/{BM_SERVER_ID}"
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -40,52 +39,74 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 async def on_ready():
     print(f'------------------------------------')
     print(f'Bot conectado como: {bot.user}')
-    print(f'ID: {bot.user.id}')
+    print(f'Usando BattleMetrics para ID: {BM_SERVER_ID}')
     print(f'------------------------------------')
-    print(f'Iniciando rastreo de ARK en {SERVER_IP}:{QUERY_PORT}...')
     if not update_player_count.is_running():
         update_player_count.start()
 
 @tasks.loop(minutes=2)
 async def update_player_count():
     try:
-        info = a2s.info((SERVER_IP, QUERY_PORT))
+        # Preguntamos a BattleMetrics en vez de directo al server
+        response = requests.get(API_URL)
+        data = response.json()
         
-        jugadores = info.player_count
-        max_jugadores = info.max_players
-        mapa = info.map_name
-        
-        if mapa == "TheIsland": mapa_nombre = "Island"
-        elif mapa == "ScorchedEarth_P": mapa_nombre = "Scorched"
-        elif mapa == "Aberration_P": mapa_nombre = "Aberration"
-        else: mapa_nombre = mapa
+        if "data" in data and "attributes" in data["data"]:
+            attrs = data["data"]["attributes"]
+            status = attrs["status"] # 'online' o 'offline'
+            
+            if status == "online":
+                jugadores = attrs["players"]
+                max_jugadores = attrs["maxPlayers"]
+                mapa = attrs["details"]["map"]
+                
+                # Limpieza de nombres de mapa
+                if mapa == "TheIsland": mapa_nombre = "Island"
+                elif mapa == "ScorchedEarth_P": mapa_nombre = "Scorched"
+                else: mapa_nombre = mapa
 
-        estado = f"{jugadores}/{max_jugadores} {mapa_nombre}"
-        
-        await bot.change_presence(activity=discord.Game(name=estado))
-        print(f"[OK] Estado actualizado: {estado}")
+                estado = f"{jugadores}/{max_jugadores} {mapa_nombre}"
+                await bot.change_presence(activity=discord.Game(name=estado))
+                print(f"[OK] BM Actualizado: {estado}")
+            else:
+                await bot.change_presence(activity=discord.Game(name="Server Offline 🔴"))
+                print("[INFO] Server marcado como offline en BM")
+        else:
+            print("[ERROR] BattleMetrics respondió puras weas.")
 
     except Exception as e:
-        print(f"[ERROR] No pude conectar al server: {e}")
-        await bot.change_presence(activity=discord.Game(name="Server Offline 🔴"))
+        print(f"[ERROR] Falló la conexión a BattleMetrics: {e}")
+        await bot.change_presence(activity=discord.Game(name="API Error ⚠️"))
 
-@bot.command(name="status", help="muestra la inforamcion del servidor") 
+@bot.command(name="status")
 async def status(ctx):
     try:
-        address = (SERVER_IP, QUERY_PORT)
-        info = a2s.info(address)
-        mensaje = (f"**Servidor:** {info.server_name}\n"
-           f"**Mapa:** {info.map_name}\n"
-           f"**Jugadores:** {info.player_count}/{info.max_players}")
-        await ctx.send(mensaje)
+        response = requests.get(API_URL)
+        data = response.json()
+        
+        if "data" in data:
+            attrs = data["data"]["attributes"]
+            name = attrs["name"]
+            ip = attrs["ip"]
+            port = attrs["port"]
+            players = attrs["players"]
+            max_players = attrs["maxPlayers"]
+            map_name = attrs["details"]["map"]
+            is_online = "🟢 Online" if attrs["status"] == "online" else "🔴 Offline"
+
+            mensaje = (f"**{name}**\n"
+                       f"**Estado:** {is_online}\n"
+                       f"**Mapa:** {map_name}\n"
+                       f"**IP:** {ip}:{port}\n"
+                       f"**Jugadores:** {players}/{max_players}")
+            await ctx.send(mensaje)
+        else:
+            await ctx.send("No encontré info en BattleMetrics wn.")
+            
     except Exception as e:
-        await ctx.send(f"No pude conectar con el server, wn :( \nError: {e}")
+        await ctx.send(f"Error al consultar la API: {e}")
 
-# Aquí buscamos el token en Render
+# Token
 token_secreto = os.getenv('DISCORD_TOKEN')
-
-if token_secreto is None:
-    print("¡ERROR! No encontré el token. Revisa las variables de entorno en Render.")
-else:
+if token_secreto:
     bot.run(token_secreto)
-
