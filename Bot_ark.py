@@ -28,7 +28,7 @@ threading.Thread(target=correr_web).start()
 # ==========================================
 
 # PON AQUÍ EL ID QUE SACASTE DE LA URL DE BATTLEMETRICS
-BM_SERVER_ID = "37035830"  # <--- CAMBIA ESTO POR TU ID REAL (Ejem: 1234567)
+BM_SERVER_ID = "37290703"  # <--- CAMBIA ESTO POR TU ID REAL (Ejem: 1234567)
 API_URL = f"https://api.battlemetrics.com/servers/{BM_SERVER_ID}"
 
 intents = discord.Intents.default()
@@ -110,3 +110,4 @@ async def status(ctx):
 token_secreto = os.getenv('DISCORD_TOKEN')
 if token_secreto:
     bot.run(token_secreto)
+
